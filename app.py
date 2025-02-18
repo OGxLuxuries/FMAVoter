@@ -4,6 +4,13 @@ from datetime import datetime, timedelta
 import time
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 
+def get_user_id():
+    """Generate a unique identifier for each user based on their session info"""
+    ctx = get_script_run_ctx()
+    if ctx is None:
+        return None
+    return hash(f"{ctx.session_id}")
+
 # Database setup
 def init_db():
     conn = sqlite3.connect('votes.db')
