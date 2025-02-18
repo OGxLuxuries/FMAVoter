@@ -1,6 +1,63 @@
 import streamlit as st
+import sqlite3
 from datetime import datetime, timedelta
 import time
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+
+# Database setup
+def init_db():
+    conn = sqlite3.connect('votes.db')
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS votes
+        (vote_id TEXT PRIMARY KEY,
+         user_id TEXT,
+         vote TEXT,
+         timestamp DATETIME)
+    ''')
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS active_sessions
+        (session_id TEXT PRIMARY KEY,
+         stock_name TEXT,
+         trade_type TEXT,
+         num_shares INTEGER,
+         end_time DATETIME)
+    ''')
+    conn.commit()
+    conn.close()
+
+def record_vote(vote):
+    user_id = get_user_id()
+    conn = sqlite3.connect('votes.db')
+    c = conn.cursor()
+    
+    # Check if user already voted
+    c.execute('SELECT * FROM votes WHERE user_id = ? AND vote_id = ?', 
+             (user_id, st.session_state.vote_id))
+    if c.fetchone() is None:
+        c.execute('INSERT INTO votes VALUES (?, ?, ?, ?)',
+                 (st.session_state.vote_id, user_id, vote, datetime.now()))
+        conn.commit()
+        st.session_state.has_voted = True
+        st.success('Vote recorded!')
+    else:
+        st.error('You have already voted!')
+    conn.close()
+
+def get_vote_counts():
+    conn = sqlite3.connect('votes.db')
+    c = conn.cursor()
+    c.execute('''
+        SELECT vote, COUNT(*) 
+        FROM votes 
+        WHERE vote_id = ? 
+        GROUP BY vote''', (st.session_state.vote_id,))
+    results = dict(c.fetchall())
+    conn.close()
+    return results.get('Yes', 0), results.get('No', 0)
+
+# Initialize database on first run
+init_db()
 
 # Initialize session state variables
 if 'voting_active' not in st.session_state:
@@ -48,20 +105,6 @@ def start_actual_voting():
     st.session_state.votes_yes = 0
     st.session_state.votes_no = 0
     st.session_state.voted_users = set()
-
-def record_vote(vote):
-    # Use session ID as a simple way to track unique voters
-    session_id = hash(st.session_state['session_id'])
-    if session_id not in st.session_state.voted_users:
-        if vote == 'Yes':
-            st.session_state.votes_yes += 1
-        else:
-            st.session_state.votes_no += 1
-        st.session_state.voted_users.add(session_id)
-        st.session_state.has_voted = True  # Mark this user as having voted
-        st.success('Vote recorded!')
-    else:
-        st.error('You have already voted!')
 
 def reset_voting_session():
     """Reset all session state variables for a new vote"""
