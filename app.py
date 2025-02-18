@@ -77,6 +77,9 @@ if 'voted_users' not in st.session_state:
     st.session_state.voted_users = set()
 if 'end_time' not in st.session_state:
     st.session_state.end_time = None
+# Add vote_id to session state
+if 'vote_id' not in st.session_state:
+    st.session_state.vote_id = None
 # Add new session state variables for voting details
 if 'stock_name' not in st.session_state:
     st.session_state.stock_name = ""
@@ -104,6 +107,8 @@ def start_voting(stock_name, trade_type, num_shares, duration_minutes):
     st.session_state.trade_type = trade_type
     st.session_state.num_shares = num_shares
     st.session_state.duration = duration_minutes
+    # Generate a unique vote_id based on timestamp and stock
+    st.session_state.vote_id = f"{stock_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
 def start_actual_voting():
     st.session_state.countdown_active = False
@@ -126,6 +131,7 @@ def reset_voting_session():
     st.session_state.num_shares = 100
     st.session_state.has_voted = False
     st.session_state.countdown_start = None
+    st.session_state.vote_id = None  # Reset vote_id
 
 def main():
     # Add logo in upper left corner
